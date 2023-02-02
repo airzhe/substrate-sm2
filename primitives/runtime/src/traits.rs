@@ -89,6 +89,13 @@ impl IdentifyAccount for sp_core::ecdsa::Public {
 	}
 }
 
+impl IdentifyAccount for sp_core::sm2::Public {
+	type AccountId = Self;
+	fn into_account(self) -> Self { 
+		self 
+	}
+}
+
 /// Means of signature verification.
 pub trait Verify {
 	/// Type of the signer.
@@ -129,6 +136,14 @@ impl Verify for sp_core::ecdsa::Signature {
 			Ok(pubkey) => signer.as_ref() == &pubkey[..],
 			_ => false,
 		}
+	}
+}
+
+impl Verify for sp_core::sm2::Signature {
+	type Signer = sp_core::sm2::Public;
+	fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &sp_core::sm2::Public) -> bool {
+		//sp_io::crypto::sm2_verify(self, msg.get(), signer)
+		true
 	}
 }
 

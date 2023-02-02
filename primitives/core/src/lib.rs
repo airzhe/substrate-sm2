@@ -57,6 +57,7 @@ pub mod crypto;
 pub mod hexdisplay;
 
 pub mod defer;
+pub mod sm2;
 pub mod ecdsa;
 pub mod ed25519;
 pub mod hash;
