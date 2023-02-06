@@ -36,7 +36,7 @@ use tracing;
 
 #[cfg(feature = "std")]
 use sp_core::{
-	crypto::Pair,
+	crypto::{Pair, Public},
 	hexdisplay::HexDisplay,
 	offchain::{OffchainDbExt, OffchainWorkerExt, TransactionPoolExt},
 	storage::ChildInfo,
@@ -51,6 +51,7 @@ use sp_core::{
 	offchain::{
 		HttpError, HttpRequestId, HttpRequestStatus, OpaqueNetworkState, StorageKind, Timestamp,
 	},
+	sm2::{self, Public as Sm2Public, Signature as Sm2Signature},
 	sr25519,
 	storage::StateVersion,
 	LogLevel, LogLevelFilter, OpaquePeerId, H256,
@@ -977,6 +978,56 @@ pub trait Crypto {
 		self.extension::<VerificationExt>()
 			.map(|extension| extension.push_ecdsa(sig.clone(), *pub_key, msg.to_vec()))
 			.unwrap_or_else(|| ecdsa_verify(sig, msg, pub_key))
+	}
+
+	/// Returns all `sm2` public keys for the given key id from the keystore.
+	fn sm2_public_keys(&mut self, id: KeyTypeId) -> Vec<sm2::Public> {
+		let keystore = &***self
+			.extension::<KeystoreExt>()
+			.expect("No `keystore` associated for the current context!");
+		SyncCryptoStore::sm2_public_keys(keystore, id)
+	}
+
+	/// Generate a `sm2` key for the given key type using an optional `seed` and
+	/// store it in the keystore.
+	///
+	/// The `seed` needs to be a valid utf8.
+	///
+	/// Returns the public key.
+	fn sm2_generate(&mut self, id: KeyTypeId, seed: Option<Vec<u8>>) -> sm2::Public {
+		let seed = seed.as_ref().map(|s| std::str::from_utf8(&s).expect("Seed is valid utf8!"));
+		let keystore = &***self
+			.extension::<KeystoreExt>()
+			.expect("No `keystore` associated for the current context!");
+		SyncCryptoStore::sm2_generate_new(keystore, id, seed).expect("`ecdsa_generate` failed")
+	}
+
+	/// Sign the given `msg` with the `sm2` key that corresponds to the given public key and
+	/// key type in the keystore.
+	///
+	/// Returns the signature.
+	fn sm2_sign(
+		&mut self,
+		id: KeyTypeId,
+		pub_key: &sm2::Public,
+		msg: &[u8],
+	) -> Option<sm2::Signature> {
+		let keystore = &***self
+			.extension::<KeystoreExt>()
+			.expect("No `keystore` associated for the current context!");
+		SyncCryptoStore::sign_with(keystore, id, &pub_key.into(), msg)
+			.ok()
+			.flatten()
+			.map(|sig| sm2::Signature::from_slice(sig.as_slice()))
+	}
+
+	fn sm2_verify(sig: &Sm2Signature, msg: &[u8], pubkey: &sm2::Public) -> bool {
+		let pk = Sm2Public::from_raw(sig.into_sm2_pk().clone());
+		if &pk != pubkey {
+			return false
+		}
+
+		sm2::Pair::verify(&sig, msg, &pubkey)
 	}
 
 	/// Verify and recover a SECP256k1 ECDSA signature.

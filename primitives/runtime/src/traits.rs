@@ -142,8 +142,7 @@ impl Verify for sp_core::ecdsa::Signature {
 impl Verify for sp_core::sm2::Signature {
 	type Signer = sp_core::sm2::Public;
 	fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &sp_core::sm2::Public) -> bool {
-		//sp_io::crypto::sm2_verify(self, msg.get(), signer)
-		true
+		sp_io::crypto::sm2_verify(self, msg.get(), signer)
 	}
 }
 

@@ -56,7 +56,7 @@ pub const CRYPTO_ID: CryptoTypeId = CryptoTypeId(*b"csm2");
 type Seed = [u8; 32];
 
 /// the SM2 conpressed key.
-#[derive(Clone, Encode, Decode, PassByInner, TypeInfo)]
+#[derive(Clone, Encode, Decode, PassByInner, TypeInfo, MaxEncodedLen)]
 pub struct Public([u8; 33]);
 
 impl PartialOrd for Public {
